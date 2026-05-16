@@ -1,0 +1,25 @@
+model:
+  name: EfficientViT-MultiTask
+  variant: efficientvit_b1
+  input_size: [512, 512]
+  num_location_classes: 31
+  num_abnormality_classes: 6
+
+backbone:
+  type: EfficientViT
+  multi_scale: true
+  attention_type: multi_scale_linear
+
+heads:
+  location: { type: classification, output_dim: 31 }
+  segmentation: { type: multi_scale_segmentation, output_dim: 1 }
+  abnormality: { type: classification, output_dim: 6 }
+
+preprocessing:
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+
+optimization:
+  precision: fp16
+  batch_size: 1
+  use_compile: true

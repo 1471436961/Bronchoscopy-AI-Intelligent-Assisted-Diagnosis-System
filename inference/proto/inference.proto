@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package bronchoscopy.ai;
+
+service InferenceEngine {
+  rpc AnalyzeFrame (FrameRequest) returns (FrameResponse);
+}
+
+message FrameRequest {
+  bytes image_jpeg = 1;
+  string session_id = 2;
+  int64 timestamp_ms = 3;
+}
+
+message FrameResponse {
+  Location location = 1;
+  Segmentation segmentation = 2;
+  Abnormality abnormality = 3;
+  float processing_ms = 4;
+}
+
+message Location {
+  int32 id = 1;
+  string name = 2;
+  float confidence = 3;
+  bool is_uncertain = 4;
+}
+
+message Segmentation {
+  bytes mask_png = 1;
+  bool has_lesion = 2;
+}
+
+message Abnormality {
+  int32 type_id = 1;
+  string type = 2;
+  float confidence = 3;
+  bool is_uncertain = 4;
+  bool is_outside = 5;
+}

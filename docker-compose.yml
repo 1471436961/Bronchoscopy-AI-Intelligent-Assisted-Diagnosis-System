@@ -1,0 +1,81 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: bronchoscopy_ai
+      POSTGRES_USER: bronchoscopy
+      POSTGRES_PASSWORD: bronchoscopy
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio:RELEASE.2024-06-29T01-20-47Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  inference:
+    build:
+      context: .
+      dockerfile: inference/Dockerfile
+    environment:
+      MODEL_PATH: /models/efficientvit_multitask.pth
+      GRPC_PORT: 50051
+      USE_TORCH_COMPILE: "false"
+    volumes:
+      - ./models:/models:ro
+    ports:
+      - "50051:50051"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    depends_on:
+      - postgres
+      - redis
+      - minio
+      - inference
+    environment:
+      DATABASE_URL: postgresql+psycopg2://bronchoscopy:bronchoscopy@postgres:5432/bronchoscopy_ai
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: change-this-secret
+      JWT_SECRET_KEY: change-this-jwt-secret
+      ENCRYPTION_KEY: change-this-32-byte-encryption-key
+      INFERENCE_GRPC_TARGET: inference:50051
+      STORAGE_BACKEND: minio
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: bronchoscopy-ai
+      CORS_ORIGINS: "*"
+    volumes:
+      - ./storage:/data/storage
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  postgres_data:
+  minio_data:
